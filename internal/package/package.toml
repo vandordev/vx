@@ -1,0 +1,14 @@
+# Package information - source of truth for project metadata
+# Run just sync after modifying this file
+
+name = "vx"
+package_name = "vx"
+module = "github.com/vandordev/vx"
+description = "A modern terminal-first CLI from Vandor Dev, built with Go, Cobra, and Bubble Tea."
+short = "A modern terminal-first CLI"
+version = "0.2.0"
+homepage = "https://github.com/vandordev/vx"
+repository = "https://github.com/vandordev/vx"
+author = "github.com/vandordev"
+docs_site = "https://vandordev.github.io"
+docs_base = "/vx"
