@@ -3,6 +3,7 @@ package testutil
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -39,4 +40,18 @@ func NewProjectFixture(t *testing.T, layout ProjectLayout) ProjectFixture {
 func (f ProjectFixture) Path(parts ...string) string {
 	segments := append([]string{f.Root}, parts...)
 	return filepath.Join(segments...)
+}
+
+func (f ProjectFixture) WriteFiles(t *testing.T, files map[string]string) {
+	t.Helper()
+
+	for relativePath, content := range files {
+		absPath := f.Path(relativePath)
+		if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", filepath.Dir(absPath), err)
+		}
+		if err := os.WriteFile(absPath, []byte(strings.TrimLeft(content, "\n")), 0o644); err != nil {
+			t.Fatalf("write %s: %v", absPath, err)
+		}
+	}
 }
