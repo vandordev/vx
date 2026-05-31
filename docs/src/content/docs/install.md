@@ -15,9 +15,19 @@ just install
 
 ## With Go Install
 
+`vx` is built from the executable package in `cmd/vx`, so the install path must target that package instead of the module root.
+
 ```bash
 go install github.com/vandordev/vx/cmd/vx@latest
 ```
+
+If you already cloned the repository locally:
+
+```bash
+go install ./cmd/vx
+```
+
+Do not use `go install github.com/vandordev/vx@latest`; the module root is not an executable `main` package.
 
 ## GitHub Releases
 

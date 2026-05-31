@@ -176,4 +176,12 @@ This repository keeps the packaging and release flows in place:
 
 ## Installation
 
-See `INSTALL.md` for installation options and release distribution notes.
+For Go users, install the CLI from the executable package:
+
+```bash
+go install github.com/vandordev/vx/cmd/vx@latest
+```
+
+The repository root is a Go module, but the binary entrypoint lives in `cmd/vx`, so `go install github.com/vandordev/vx@latest` is not the correct install path.
+
+See `INSTALL.md` for the full installation matrix and release distribution notes.
