@@ -4,6 +4,28 @@ description: Installation instructions for vx
 ---
 
 
+## Quick Install
+
+For macOS and Linux, install the latest release with:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
+```
+
+Install a pinned release:
+
+```bash
+VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
+```
+
+Override the install directory:
+
+```bash
+BIN_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
+```
+
+The installer defaults to `$HOME/.local/bin` and prints a PATH hint if that directory is not currently exported by your shell.
+
 ## From Source
 
 ```bash
@@ -28,6 +50,12 @@ go install ./cmd/vx
 ```
 
 Do not use `go install github.com/vandordev/vx@latest`; the module root is not an executable `main` package.
+
+Windows users should use:
+
+```bash
+go install github.com/vandordev/vx/cmd/vx@latest
+```
 
 ## GitHub Releases
 

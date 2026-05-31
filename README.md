@@ -172,7 +172,20 @@ This repository keeps the packaging and release flows in place:
 
 ## Installation
 
-For Go users, install the CLI from the executable package:
+For macOS and Linux, install the latest release with:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
+```
+
+Pin a release or change the install directory with:
+
+```bash
+VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
+BIN_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
+```
+
+For Go users and Windows users, install the CLI from the executable package:
 
 ```bash
 go install github.com/vandordev/vx/cmd/vx@latest
