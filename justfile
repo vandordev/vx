@@ -32,6 +32,9 @@ test-verbose:
 test-install:
 	./scripts/test_install.sh
 
+test-install-docs:
+	./scripts/test_install_docs.sh
+
 sync:
 	./scripts/sync.sh
 
