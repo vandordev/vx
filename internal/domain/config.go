@@ -19,7 +19,6 @@ type Config struct {
 	Muted                string `toml:"muted"`
 	Accent               string `toml:"accent"`
 	Border               string `toml:"border"`
-	InteractiveDefault   bool   `toml:"interactive_default"`
 	ListSpacing          string `toml:"list_spacing"`
 }
 
@@ -38,7 +37,6 @@ func DefaultConfig() Config {
 		Muted:                "08",
 		Accent:               "13",
 		Border:               "08",
-		InteractiveDefault:   true,
 		ListSpacing:          "space",
 	}
 }

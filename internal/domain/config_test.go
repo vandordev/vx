@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -74,12 +75,6 @@ func TestDefaultConfig(t *testing.T) {
 		}
 	})
 
-	t.Run("has interactive default enabled", func(t *testing.T) {
-		if !cfg.InteractiveDefault {
-			t.Error("DefaultConfig().InteractiveDefault should be true")
-		}
-	})
-
 	t.Run("has list spacing set", func(t *testing.T) {
 		if cfg.ListSpacing == "" {
 			t.Error("DefaultConfig().ListSpacing should not be empty")
@@ -101,9 +96,6 @@ func TestDefaultConfig_Consistency(t *testing.T) {
 		if cfg1.Headings != cfg2.Headings {
 			t.Error("DefaultConfig() should return consistent Headings values")
 		}
-		if cfg1.InteractiveDefault != cfg2.InteractiveDefault {
-			t.Error("DefaultConfig() should return consistent InteractiveDefault values")
-		}
 	})
 }
 
@@ -111,16 +103,22 @@ func TestConfig_StructTags(t *testing.T) {
 	t.Run("has toml tags for all fields", func(t *testing.T) {
 		// This is a regression test to ensure TOML tags don't get accidentally removed
 		cfg := Config{}
-		
+
 		// Set values to ensure struct is properly tagged
 		cfg.Editor = "test"
 		cfg.Primary = "01"
-		cfg.InteractiveDefault = false
 		cfg.ListSpacing = "compact"
-		
+
 		// If this compiles and runs, the struct tags are present
 		if cfg.Editor != "test" {
 			t.Error("Config struct should be properly defined")
 		}
 	})
+}
+
+func TestConfig_RemovesInteractiveDefaultField(t *testing.T) {
+	configType := reflect.TypeOf(Config{})
+	if _, ok := configType.FieldByName("InteractiveDefault"); ok {
+		t.Fatal("expected Config to no longer expose InteractiveDefault")
+	}
 }

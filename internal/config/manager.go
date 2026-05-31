@@ -97,7 +97,6 @@ type partialConfig struct {
 	Muted                *string `toml:"muted"`
 	Accent               *string `toml:"accent"`
 	Border               *string `toml:"border"`
-	InteractiveDefault   *bool   `toml:"interactive_default"`
 	ListSpacing          *string `toml:"list_spacing"`
 }
 
@@ -152,9 +151,6 @@ func applyPartial(config *domain.Config, partial *partialConfig) {
 	}
 	if partial.Border != nil {
 		config.Border = *partial.Border
-	}
-	if partial.InteractiveDefault != nil {
-		config.InteractiveDefault = *partial.InteractiveDefault
 	}
 	if partial.ListSpacing != nil {
 		config.ListSpacing = *partial.ListSpacing

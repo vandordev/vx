@@ -17,7 +17,6 @@ Optional local override:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `editor` | string | `nvim` | Editor opened by `vx config` |
-| `interactive_default` | bool | `true` | Start in interactive mode when no arguments are given |
 | `list_spacing` | string | `space` | List density: `compact`, `tight`, or `space` |
 | `headings` | string | `15` | Heading color |
 | `primary` | string | `02` | Primary accent color |
@@ -37,9 +36,6 @@ Colors accept named values, terminal palette indexes, or hex strings such as `"#
 ```toml
 # General
 editor = "nvim"
-
-# CLI behavior
-interactive_default = true
 
 # UI
 list_spacing = "space"

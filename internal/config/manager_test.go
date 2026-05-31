@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/vandordev/vx/internal/domain"
@@ -77,6 +78,14 @@ func TestManagerSavesConfig(t *testing.T) {
 	configPath := utils.ConfigPathGlobal()
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		t.Fatal("expected config file to exist")
+	}
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read saved config: %v", err)
+	}
+	if strings.Contains(string(data), "interactive_default") {
+		t.Fatalf("expected saved config to omit interactive_default, content:\n%s", string(data))
 	}
 }
 
@@ -278,9 +287,6 @@ func TestManagerPartialConfig(t *testing.T) {
 		if cfg.Headings != "15" {
 			t.Errorf("expected default headings, got %q", cfg.Headings)
 		}
-		if !cfg.InteractiveDefault {
-			t.Error("expected default interactive_default to be true")
-		}
 	})
 }
 
@@ -342,34 +348,5 @@ border = "06"
 		if tt.got != tt.expected {
 			t.Errorf("%s = %q, want %q", tt.name, tt.got, tt.expected)
 		}
-	}
-}
-
-func TestManagerBooleanOverrides(t *testing.T) {
-	root := t.TempDir()
-	cwd := filepath.Join(root, "project")
-	if err := os.MkdirAll(cwd, 0o755); err != nil {
-		t.Fatalf("mkdir cwd: %v", err)
-	}
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(root, "config"))
-
-	configPath := utils.ConfigPathGlobal()
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
-		t.Fatalf("mkdir config dir: %v", err)
-	}
-
-	data := []byte("interactive_default = false\n")
-	if err := os.WriteFile(configPath, data, 0o644); err != nil {
-		t.Fatalf("write config: %v", err)
-	}
-
-	manager := NewManager(cwd)
-	cfg, err := manager.Load()
-	if err != nil {
-		t.Fatalf("load: %v", err)
-	}
-
-	if cfg.InteractiveDefault {
-		t.Error("expected interactive_default to be false from config")
 	}
 }

@@ -1,9 +1,6 @@
 # General
 editor = "nvim"
 
-# CLI behavior
-interactive_default = true
-
 # UI
 # list_spacing options: compact (title only), tight (title + description, no margin), space (default, with spacing)
 list_spacing = "space"
