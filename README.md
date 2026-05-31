@@ -1,12 +1,15 @@
 # vx
 
-`vx` is the main CLI project for `github.com/vandordev`.
+`vx` is the local runtime CLI for `vpkg` packages and `vxt` templates.
 
-The current codebase provides a terminal-first foundation built with Go, Cobra, and inline Bubble Tea components. Today it includes an interactive directory browser, configuration management, shell completion, generated documentation, and release automation for GitHub, Homebrew, and AUR.
+The current public surface is project-local and preview-first. `vx` discovers packages from the nearest parent directory containing `vpkg/`, inspects packages and exports with `vx view`, and previews or applies `template` exports and direct `.vxt` files with `vx gen`.
 
 ## Features
 
-- Inline Bubble Tea UI for browsing the current directory
+- Project-root discovery through the nearest parent containing `vpkg/`
+- Local package discovery from `vpkg/<namespace>/<package>/vpkg.yaml`
+- `vx view` for package, export, and direct `.vxt` inspection
+- `vx gen` and `vx generate` for preview-first template generation
 - TOML configuration with XDG-aware global and local lookup
 - Config bootstrap and editor integration
 - Shell completion for bash, zsh, fish, and PowerShell
@@ -24,19 +27,62 @@ The current codebase provides a terminal-first foundation built with Go, Cobra, 
 ```bash
 gh repo clone vandordev/vx
 cd vx
-just build-run
+just build
+./bin/vx
 ```
 
 ## Commands
 
 ```bash
 vx
+vx view vandor/go-backend-core
+vx view vandor/go-backend-core:default
+vx view ./templates/usecase.vxt
+vx gen vandor/go-backend-core --set name=create_booking
+vx gen ./templates/usecase.vxt --set context=booking --apply
+vx generate vandor/go-backend-core:default --set name=create_booking
 vx config
 vx config init
 vx completion bash
 ```
 
-`vx` currently opens an inline directory listing for the working directory. The supporting commands manage config files and shell completion.
+`vx` without arguments prints an overview of the local runtime commands and examples.
+
+`vx view` is non-destructive:
+
+- package targets show identity, version, kind, and declared exports
+- export targets show metadata and, for `template` exports, required inputs from the `.vxt` contract
+- direct `.vxt` targets work when the file is inside the detected project root
+
+`vx gen` is preview-first:
+
+- only `template` exports and direct `.vxt` files are executable in `v0.1`
+- output writes target the detected project root, not the current working directory
+- files are written only with `--apply`
+
+## Project Layout
+
+`vx` expects a project-local `vpkg/` tree such as:
+
+```text
+my-project/
+├── vpkg/
+│   └── vandor/
+│       └── go-backend-core/
+│           ├── vpkg.yaml
+│           └── templates/
+│               └── usecase.vxt
+└── templates/
+    └── standalone.vxt
+```
+
+Supported target forms:
+
+- `namespace/package`
+- `namespace/package:export`
+- unique shorthand package such as `go-backend-core`
+- unique shorthand export such as `usecase`
+- direct path such as `./templates/usecase.vxt`
 
 ## Configuration
 
@@ -62,7 +108,7 @@ To open the resolved config file in your editor:
 vx config
 ```
 
-See `example-config.toml` for the available keys.
+See `example-config.toml` for the available keys. Configuration does not control the root command behavior; runtime discovery comes from the local `vpkg/` project layout.
 
 ## Development
 
@@ -107,7 +153,7 @@ This repository keeps the packaging and release flows in place:
 - `just deploy-homebrew <version>`
 - `just deploy-aur <version>`
 
-## Project Layout
+## Repository Layout
 
 ```text
 .
@@ -120,7 +166,7 @@ This repository keeps the packaging and release flows in place:
 ```
 
 - `cmd/vx` contains the Cobra entrypoint and subcommands.
-- `internal/` contains domain models, config loading, UI, adapters, and utilities.
+- `internal/` contains runtime services, config loading, package discovery, resolution, UI, adapters, and utilities.
 - `docs/` contains the Starlight documentation site.
 - `scripts/` contains release and packaging automation.
 

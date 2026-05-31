@@ -24,6 +24,8 @@ vx [command]
 - [`completion`](/commands/completion) - Generate shell completion scripts
 - [`config`](/commands/config) - View or edit configuration
 - [`config init`](/commands/config-init) - Generate a default config file
+- [`gen`](/commands/gen) - Preview or apply generation for a local vpkg export or .vxt file
+- [`view`](/commands/view) - Inspect a local vpkg package, export, or direct .vxt file
 
 ## Source
 
