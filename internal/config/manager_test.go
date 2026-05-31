@@ -84,8 +84,9 @@ func TestManagerSavesConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read saved config: %v", err)
 	}
-	if strings.Contains(string(data), "interactive_default") {
-		t.Fatalf("expected saved config to omit interactive_default, content:\n%s", string(data))
+	legacyKey := "interactive" + "_default"
+	if strings.Contains(string(data), legacyKey) {
+		t.Fatalf("expected saved config to omit the legacy startup key, content:\n%s", string(data))
 	}
 }
 

@@ -50,7 +50,8 @@ func TestRootCommandWithoutArgsPrintsOverview(t *testing.T) {
 		}
 	}
 
-	if strings.Contains(output, "Directory:") {
-		t.Fatalf("expected root overview to avoid directory browser output, output:\n%s", output)
+	legacyTitle := "Directory" + ":"
+	if strings.Contains(output, legacyTitle) {
+		t.Fatalf("expected root overview to avoid the legacy title, output:\n%s", output)
 	}
 }

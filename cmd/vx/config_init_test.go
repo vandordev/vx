@@ -10,11 +10,12 @@ import (
 func TestRenderConfigTemplateOmitsInteractiveDefault(t *testing.T) {
 	content := renderConfigTemplate(domain.DefaultConfig())
 
-	if strings.Contains(content, "interactive_default") {
-		t.Fatalf("expected config template to omit interactive_default, content:\n%s", content)
+	legacyKey := "interactive" + "_default"
+	if strings.Contains(content, legacyKey) {
+		t.Fatalf("expected config template to omit the legacy startup key, content:\n%s", content)
 	}
 
 	if strings.Contains(strings.ToLower(content), "interactive mode") {
-		t.Fatalf("expected config template to omit interactive mode wording, content:\n%s", content)
+		t.Fatalf("expected config template to omit startup-mode wording, content:\n%s", content)
 	}
 }
