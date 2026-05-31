@@ -29,6 +29,9 @@ test:
 test-verbose:
 	go test -v ./...
 
+test-install:
+	./scripts/test_install.sh
+
 sync:
 	./scripts/sync.sh
 
