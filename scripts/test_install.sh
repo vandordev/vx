@@ -28,7 +28,7 @@ make_stub_dir() {
 	mkdir -p "$workdir/stubs"
 
 	cat >"$workdir/stubs/uname" <<'EOF'
-#!/usr/bin/env sh
+#!/bin/sh
 case "${1:-}" in
 	-s) printf '%s\n' "${VX_TEST_UNAME_S:-Linux}" ;;
 	-m) printf '%s\n' "${VX_TEST_UNAME_M:-x86_64}" ;;
@@ -37,7 +37,7 @@ esac
 EOF
 
 	cat >"$workdir/stubs/curl" <<'EOF'
-#!/usr/bin/env sh
+#!/bin/sh
 out=''
 while [ "$#" -gt 0 ]; do
 	case "$1" in
@@ -56,7 +56,7 @@ done
 EOF
 
 	cat >"$workdir/stubs/tar" <<'EOF'
-#!/usr/bin/env sh
+#!/bin/sh
 dest=''
 while [ "$#" -gt 0 ]; do
 	case "$1" in
@@ -76,6 +76,34 @@ EOF
 	chmod +x "$workdir/stubs/uname" "$workdir/stubs/curl" "$workdir/stubs/tar"
 }
 
+make_isolated_path_dir() {
+	workdir=$1
+	mkdir -p "$workdir/pathbin"
+
+	link_cmd() {
+		name=$1
+		target=$(command -v "$name")
+		ln -sf "$target" "$workdir/pathbin/$name"
+	}
+
+	link_cmd mkdir
+	link_cmd rm
+	link_cmd mktemp
+	link_cmd chmod
+	link_cmd mv
+
+	cp "$workdir/stubs/uname" "$workdir/pathbin/uname"
+	chmod +x "$workdir/pathbin/uname"
+	if [ "${VX_TEST_INCLUDE_CURL:-1}" = "1" ]; then
+		cp "$workdir/stubs/curl" "$workdir/pathbin/curl"
+		chmod +x "$workdir/pathbin/curl"
+	fi
+	if [ "${VX_TEST_INCLUDE_TAR:-1}" = "1" ]; then
+		cp "$workdir/stubs/tar" "$workdir/pathbin/tar"
+		chmod +x "$workdir/pathbin/tar"
+	fi
+}
+
 run_installer() {
 	workdir=$1
 	output=$2
@@ -85,6 +113,18 @@ run_installer() {
 	VX_TEST_CURL_LOG="$workdir/curl.log" \
 	VX_TEST_EXTRACTED_BINARY="${VX_TEST_EXTRACTED_BINARY:-vx-linux-amd64}" \
 	"$@" sh "$ROOT_DIR/scripts/install.sh" >"$output" 2>&1
+}
+
+run_installer_isolated_path() {
+	workdir=$1
+	output=$2
+
+	sh_bin=$(command -v sh)
+
+	PATH="$workdir/pathbin" \
+	VX_TEST_CURL_LOG="$workdir/curl.log" \
+	VX_TEST_EXTRACTED_BINARY="${VX_TEST_EXTRACTED_BINARY:-vx-linux-amd64}" \
+	"$sh_bin" "$ROOT_DIR/scripts/install.sh" >"$output" 2>&1
 }
 
 test_latest_linux_default_dir() {
@@ -160,7 +200,89 @@ test_missing_home_fails() {
 	trap - EXIT INT TERM
 }
 
+test_missing_curl_fails() {
+	workdir=$(mktemp -d)
+	trap 'rm -rf "$workdir"' EXIT INT TERM
+	make_stub_dir "$workdir"
+	VX_TEST_INCLUDE_CURL=0 VX_TEST_INCLUDE_TAR=1 make_isolated_path_dir "$workdir"
+
+	output="$workdir/output.log"
+	HOME="$workdir/home"
+	export HOME
+	if run_installer_isolated_path "$workdir" "$output"; then
+		fail "missing curl fails"
+	fi
+
+	assert_contains "requires curl" "$output"
+	pass "missing curl fails"
+	rm -rf "$workdir"
+	trap - EXIT INT TERM
+}
+
+test_missing_tar_fails() {
+	workdir=$(mktemp -d)
+	trap 'rm -rf "$workdir"' EXIT INT TERM
+	make_stub_dir "$workdir"
+	VX_TEST_INCLUDE_CURL=1 VX_TEST_INCLUDE_TAR=0 make_isolated_path_dir "$workdir"
+
+	output="$workdir/output.log"
+	HOME="$workdir/home"
+	export HOME
+	if run_installer_isolated_path "$workdir" "$output"; then
+		fail "missing tar fails"
+	fi
+
+	assert_contains "requires tar" "$output"
+	pass "missing tar fails"
+	rm -rf "$workdir"
+	trap - EXIT INT TERM
+}
+
+test_install_failure_surfaces_error() {
+	workdir=$(mktemp -d)
+	trap 'rm -rf "$workdir"' EXIT INT TERM
+	make_stub_dir "$workdir"
+
+	cat >"$workdir/stubs/mv" <<'EOF'
+#!/bin/sh
+printf 'mv failed\n' >&2
+exit 1
+EOF
+	chmod +x "$workdir/stubs/mv"
+
+	output="$workdir/output.log"
+	if run_installer "$workdir" "$output" env HOME="$workdir/home"; then
+		fail "install failure surfaces error"
+	fi
+
+	assert_contains "mv failed" "$output"
+	pass "install failure surfaces error"
+	rm -rf "$workdir"
+	trap - EXIT INT TERM
+}
+
+test_path_warning_is_printed() {
+	workdir=$(mktemp -d)
+	trap 'rm -rf "$workdir"' EXIT INT TERM
+	make_stub_dir "$workdir"
+
+	output="$workdir/output.log"
+	if ! run_installer "$workdir" "$output" env HOME="$workdir/home" BIN_DIR="$workdir/custom-bin"; then
+		cat "$output" >&2
+		fail "install with custom BIN_DIR succeeds"
+	fi
+
+	assert_contains 'export PATH="' "$output"
+	pass "path warning is printed"
+	rm -rf "$workdir"
+	trap - EXIT INT TERM
+}
+
 test_latest_linux_default_dir
 test_pinned_darwin_custom_bin_dir
 test_unsupported_platform_fails
 test_missing_home_fails
+test_missing_curl_fails
+test_missing_tar_fails
+test_install_failure_surfaces_error
+test_path_warning_is_printed
