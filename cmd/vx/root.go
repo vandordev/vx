@@ -50,8 +50,7 @@ func newRootCmd() *cobra.Command {
 				cmd.Printf("%s\n", ver)
 				return nil
 			}
-			// Interactive file manager will go here
-			return runInteractive(cmd, opts, args)
+			return runOverview(cmd)
 		},
 	}
 
@@ -60,8 +59,31 @@ func newRootCmd() *cobra.Command {
 
 	cmd.AddCommand(newConfigCmd())
 	cmd.AddCommand(newCompletionCmd())
+	cmd.AddCommand(newViewCmd())
+	cmd.AddCommand(newGenCmd())
 
 	return cmd
+}
+
+func runOverview(cmd *cobra.Command) error {
+	lines := []string{
+		"VX inspects and generates local templates from a project vpkg/ runtime.",
+		"",
+		"Commands:",
+		"  vx view <target>      Inspect a package, export, or direct .vxt template",
+		"  vx gen <target>       Preview or apply generation for a template target",
+		"",
+		"Examples:",
+		"  vx view vandor/go-backend-core:usecase",
+		"  vx gen vandor/go-backend-core:default",
+		"  vx view ./templates/usecase.vxt",
+		"  vx gen ./templates/usecase.vxt",
+		"",
+		"vx expects the current project, or one of its parents, to contain vpkg/.",
+	}
+
+	cmd.Println(strings.Join(lines, "\n"))
+	return nil
 }
 
 func resolvedVersion() string {
