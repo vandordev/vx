@@ -2,6 +2,20 @@
 set -eu
 
 REPO_URL="https://github.com/vandordev/vx/releases"
+
+require_cmd() {
+	name=$1
+	if ! command -v "$name" >/dev/null 2>&1; then
+		printf 'vx installer requires %s\n' "$name" >&2
+		exit 1
+	fi
+}
+
+require_cmd uname
+require_cmd mktemp
+require_cmd curl
+require_cmd tar
+
 TMP_DIR=$(mktemp -d)
 
 cleanup() {
@@ -57,11 +71,38 @@ esac
 ARCHIVE_PATH="$TMP_DIR/$ASSET"
 DOWNLOAD_URL="$RELEASE_URL/$ASSET"
 
-curl -fsSL "$DOWNLOAD_URL" -o "$ARCHIVE_PATH"
-tar -xzf "$ARCHIVE_PATH" -C "$TMP_DIR"
+if ! curl -fsSL "$DOWNLOAD_URL" -o "$ARCHIVE_PATH"; then
+	printf 'vx installer failed to download %s\n' "$DOWNLOAD_URL" >&2
+	exit 1
+fi
 
-mkdir -p "$BIN_DIR"
-mv "$TMP_DIR/$EXTRACTED_BINARY" "$BIN_DIR/vx"
-chmod +x "$BIN_DIR/vx"
+if ! tar -xzf "$ARCHIVE_PATH" -C "$TMP_DIR"; then
+	printf 'vx installer failed to extract %s\n' "$ARCHIVE_PATH" >&2
+	exit 1
+fi
+
+if ! mkdir -p "$BIN_DIR"; then
+	printf 'vx installer failed to create %s\n' "$BIN_DIR" >&2
+	exit 1
+fi
+
+if ! mv "$TMP_DIR/$EXTRACTED_BINARY" "$BIN_DIR/vx"; then
+	printf 'vx installer failed to install vx into %s\n' "$BIN_DIR" >&2
+	exit 1
+fi
+
+if ! chmod +x "$BIN_DIR/vx"; then
+	printf 'vx installer failed to mark %s/vx as executable\n' "$BIN_DIR" >&2
+	exit 1
+fi
 
 printf 'installed vx %s to %s/vx\n' "$REQUESTED_VERSION" "$BIN_DIR"
+printf 'verify with: vx --version\n'
+
+case ":${PATH:-}:" in
+	*:"$BIN_DIR":*)
+		;;
+	*)
+		printf 'add to PATH: export PATH="%s:$PATH"\n' "$BIN_DIR"
+		;;
+esac
