@@ -1,6 +1,6 @@
 # vx
 
-`vx` is the local runtime CLI for `vpkg` packages and `vxt` templates.
+A modern terminal-first CLI from Vandor Dev, built with Go, Cobra, and Bubble Tea.
 
 The current public surface is project-local and preview-first. `vx` discovers packages from the nearest parent directory containing `vpkg/`, inspects packages and exports with `vx view`, and previews or applies `template` exports and direct `.vxt` files with `vx gen`.
 
