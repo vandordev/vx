@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/vandordev/vx/internal/project"
 	"github.com/vandordev/vx/internal/resolve"
 	"github.com/vandordev/vx/internal/testutil"
 	"github.com/vandordev/vx/internal/vpkg"
@@ -174,6 +175,70 @@ hello {{ context }}
 		})
 		if err == nil || !strings.Contains(err.Error(), "missing input") {
 			t.Fatalf("Generate error = %v, want missing input error", err)
+		}
+	})
+
+	t.Run("injects project context into template input", func(t *testing.T) {
+		fixture.WriteFiles(t, map[string]string{
+			filepath.Join("vpkg", "vandor", "go-backend-core", "templates", "context.vxt"): `
+@template context
+@input name string
+@file "internal/{{ name }}_context.txt"
+module={{ project.go.module }}
+module_root={{ project.go.module_root }}
+root={{ project.root }}
+language={{ project.language }}
+@endfile
+`,
+			filepath.Join("vpkg", "vandor", "go-backend-core", "vpkg.yaml"): `
+apiVersion: vandor.dev/v1alpha1
+name: vandor/go-backend-core
+version: 0.1.0
+kind: template-pack
+exports:
+  context:
+    kind: template
+    templates:
+      - path: templates/context.vxt
+`,
+		})
+		packages, err := vpkg.Discover(fixture.Root)
+		if err != nil {
+			t.Fatalf("Discover returned error: %v", err)
+		}
+		target := mustResolveGenerate(t, fixture.Root, "vandor/go-backend-core:context", packages)
+
+		_, err = Generate(Request{
+			ProjectRoot: fixture.Root,
+			ProjectContext: project.Context{
+				Root:     fixture.Root,
+				Language: "go",
+				Go: &project.GoContext{
+					Module:     "github.com/acme/platform/services/billing",
+					ModuleRoot: filepath.Join("services", "billing"),
+				},
+			},
+			Target: target,
+			Input:  map[string]any{"name": "booking"},
+			Apply:  true,
+		})
+		if err != nil {
+			t.Fatalf("Generate returned error: %v", err)
+		}
+
+		content, err := os.ReadFile(fixture.Path("internal", "booking_context.txt"))
+		if err != nil {
+			t.Fatalf("read generated file: %v", err)
+		}
+		for _, snippet := range []string{
+			"module=github.com/acme/platform/services/billing",
+			"module_root=" + filepath.Join("services", "billing"),
+			"root=" + fixture.Root,
+			"language=go",
+		} {
+			if !strings.Contains(string(content), snippet) {
+				t.Fatalf("expected generated content to contain %q, content:\n%s", snippet, content)
+			}
 		}
 	})
 }

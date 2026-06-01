@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/vandordev/vx/internal/project"
 	"github.com/vandordev/vx/internal/resolve"
 	"github.com/vandordev/vx/internal/testutil"
 	"github.com/vandordev/vx/internal/vpkg"
@@ -175,6 +176,55 @@ hello {{ context }}
 		})
 		if err == nil || !strings.Contains(err.Error(), "missing input") {
 			t.Fatalf("Inspect error = %v, want missing input error", err)
+		}
+	})
+
+	t.Run("injects project context into planned template input", func(t *testing.T) {
+		fixture.WriteFiles(t, map[string]string{
+			filepath.Join("vpkg", "vandor", "go-backend-core", "templates", "context.vxt"): `
+@template context
+@input name string
+@file "{{ project.go.module_root }}/{{ name }}.txt"
+module {{ project.go.module }}
+@endfile
+`,
+			filepath.Join("vpkg", "vandor", "go-backend-core", "vpkg.yaml"): `
+apiVersion: vandor.dev/v1alpha1
+name: vandor/go-backend-core
+version: 0.1.0
+kind: template-pack
+exports:
+  context:
+    kind: template
+    templates:
+      - path: templates/context.vxt
+`,
+		})
+		packages, err := vpkg.Discover(fixture.Root)
+		if err != nil {
+			t.Fatalf("Discover returned error: %v", err)
+		}
+		target := mustResolve(t, fixture.Root, "vandor/go-backend-core:context", packages, resolve.ModeView)
+
+		result, err := Inspect(Request{
+			ProjectRoot: fixture.Root,
+			ProjectContext: project.Context{
+				Root:     fixture.Root,
+				Language: "go",
+				Go: &project.GoContext{
+					Module:     "github.com/acme/platform/services/billing",
+					ModuleRoot: filepath.Join("services", "billing"),
+				},
+			},
+			Target: target,
+			Input:  map[string]any{"name": "booking"},
+			Plan:   true,
+		})
+		if err != nil {
+			t.Fatalf("Inspect returned error: %v", err)
+		}
+		if len(result.PlannedFiles) != 1 || result.PlannedFiles[0].Path != filepath.Join("services", "billing", "booking.txt") {
+			t.Fatalf("PlannedFiles = %#v", result.PlannedFiles)
 		}
 	})
 }

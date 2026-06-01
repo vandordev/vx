@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/vandordev/vx/internal/project"
 	"github.com/vandordev/vx/internal/resolve"
 	"github.com/vandordev/vx/internal/vpkg"
 	"github.com/vandordev/vxt/runtime"
@@ -15,6 +16,7 @@ import (
 
 type Request struct {
 	ProjectRoot    string
+	ProjectContext project.Context
 	Target         resolve.ResolvedTarget
 	Input          map[string]any
 	Apply          bool
@@ -43,7 +45,8 @@ func Generate(req Request) (Result, error) {
 		ExportName:  req.Target.ExportName,
 	}
 
-	plan, err := buildPlan(req.Target, req.Input)
+	input := project.InjectContext(req.Input, req.ProjectContext)
+	plan, err := buildPlan(req.Target, input)
 	if err != nil {
 		return Result{}, err
 	}

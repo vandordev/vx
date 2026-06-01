@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/vandordev/vx/internal/project"
 	"github.com/vandordev/vx/internal/resolve"
 	"github.com/vandordev/vx/internal/vpkg"
 	"github.com/vandordev/vxt/runtime"
@@ -14,10 +15,11 @@ import (
 )
 
 type Request struct {
-	ProjectRoot string
-	Target      resolve.ResolvedTarget
-	Input       map[string]any
-	Plan        bool
+	ProjectRoot    string
+	ProjectContext project.Context
+	Target         resolve.ResolvedTarget
+	Input          map[string]any
+	Plan           bool
 }
 
 type Result struct {
@@ -68,6 +70,7 @@ func Inspect(req Request) (Result, error) {
 		ProjectRoot: req.ProjectRoot,
 		SourceClass: req.Target.SourceClass,
 	}
+	input := project.InjectContext(req.Input, req.ProjectContext)
 
 	switch req.Target.SourceClass {
 	case resolve.SourceClassDirectVXT:
@@ -77,7 +80,7 @@ func Inspect(req Request) (Result, error) {
 		}
 		result.RequiredInputs = requiredInputs(doc)
 		if req.Plan {
-			dirs, files, err := planDocument(doc, req.Input)
+			dirs, files, err := planDocument(doc, input)
 			if err != nil {
 				return Result{}, err
 			}
@@ -109,7 +112,7 @@ func Inspect(req Request) (Result, error) {
 		}
 		result.RequiredInputs = requiredInputs(doc)
 		if req.Plan {
-			dirs, files, err := planTemplateExport(templatePaths, req.Input)
+			dirs, files, err := planTemplateExport(templatePaths, input)
 			if err != nil {
 				return Result{}, err
 			}
