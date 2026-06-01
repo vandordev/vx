@@ -84,6 +84,29 @@ Supported target forms:
 - unique shorthand export such as `usecase`
 - direct path such as `./templates/usecase.vxt`
 
+## Project Context
+
+`vx` injects project context into `vxt` template input for `vx view --plan` and `vx gen`.
+
+- `project.root` is always available for successful commands.
+- `project.language` is currently only `go` and is present only when Go is detected.
+- Go fields live under `project.go.*`.
+- `project.go.module_root` is relative to `project.root`.
+- The nearest in-root `go.mod` from the current working directory wins.
+- Undetected context is omitted instead of injected as blank strings.
+
+Example:
+
+```vxt
+@template service
+@input name string
+@file "{{ project.go.module_root }}/internal/{{ name }}.go"
+package {{ name }}
+
+// module: {{ project.go.module }}
+@endfile
+```
+
 ## Configuration
 
 Global configuration lives at `$XDG_CONFIG_HOME/vx/config.toml`, typically `~/.config/vx/config.toml`.
