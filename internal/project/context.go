@@ -20,6 +20,31 @@ type GoContext struct {
 	ModuleRoot string
 }
 
+func (c Context) Values() map[string]any {
+	projectValues := map[string]any{
+		"root": c.Root,
+	}
+	if c.Language != "" {
+		projectValues["language"] = c.Language
+	}
+	if c.Go != nil {
+		goValues := map[string]any{}
+		if c.Go.Module != "" {
+			goValues["module"] = c.Go.Module
+		}
+		if c.Go.ModuleRoot != "" {
+			goValues["module_root"] = c.Go.ModuleRoot
+		}
+		if len(goValues) > 0 {
+			projectValues["go"] = goValues
+		}
+	}
+
+	return map[string]any{
+		"project": projectValues,
+	}
+}
+
 func DetectContext(projectRoot string, cwd string) (Context, error) {
 	absRoot, err := filepath.Abs(projectRoot)
 	if err != nil {

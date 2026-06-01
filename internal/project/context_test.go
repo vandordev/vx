@@ -115,6 +115,58 @@ func TestDetectContextOmitsGoContextWhenNoInRootModuleExists(t *testing.T) {
 	})
 }
 
+func TestContextValuesIncludesSparseProjectContext(t *testing.T) {
+	ctx := Context{
+		Root:     "/repo",
+		Language: "go",
+		Go: &GoContext{
+			Module:     "github.com/acme/platform/services/billing",
+			ModuleRoot: filepath.Join("services", "billing"),
+		},
+	}
+
+	values := ctx.Values()
+	projectValues, ok := values["project"].(map[string]any)
+	if !ok {
+		t.Fatalf("project values = %#v", values["project"])
+	}
+	goValues, ok := projectValues["go"].(map[string]any)
+	if !ok {
+		t.Fatalf("go values = %#v", projectValues["go"])
+	}
+
+	if projectValues["root"] != "/repo" {
+		t.Fatalf("project.root = %#v", projectValues["root"])
+	}
+	if projectValues["language"] != "go" {
+		t.Fatalf("project.language = %#v", projectValues["language"])
+	}
+	if goValues["module"] != "github.com/acme/platform/services/billing" {
+		t.Fatalf("project.go.module = %#v", goValues["module"])
+	}
+	if goValues["module_root"] != filepath.Join("services", "billing") {
+		t.Fatalf("project.go.module_root = %#v", goValues["module_root"])
+	}
+}
+
+func TestContextValuesOmitsUndetectedFields(t *testing.T) {
+	values := Context{Root: "/repo"}.Values()
+	projectValues, ok := values["project"].(map[string]any)
+	if !ok {
+		t.Fatalf("project values = %#v", values["project"])
+	}
+
+	if projectValues["root"] != "/repo" {
+		t.Fatalf("project.root = %#v", projectValues["root"])
+	}
+	if _, ok := projectValues["language"]; ok {
+		t.Fatalf("project.language present, values = %#v", projectValues)
+	}
+	if _, ok := projectValues["go"]; ok {
+		t.Fatalf("project.go present, values = %#v", projectValues)
+	}
+}
+
 func assertNoGoContext(t *testing.T, ctx Context) {
 	t.Helper()
 
