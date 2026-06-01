@@ -202,3 +202,52 @@ hello {{ name }}
 		}
 	})
 }
+
+func TestViewCommandInjectsProjectContextForPlan(t *testing.T) {
+	fixture := testutil.NewProjectFixture(t, testutil.ProjectLayout{
+		VPKGRoots: []string{"."},
+		Directories: []string{
+			filepath.Join("services", "billing", "internal", "app"),
+		},
+	})
+	fixture.WriteFiles(t, map[string]string{
+		filepath.Join("services", "billing", "go.mod"): "module github.com/acme/platform/services/billing\n\ngo 1.25\n",
+		filepath.Join("vpkg", "vandor", "go-backend-core", "vpkg.yaml"): `
+apiVersion: vandor.dev/v1alpha1
+name: vandor/go-backend-core
+version: 0.1.0
+kind: template-pack
+exports:
+  default:
+    kind: template
+    templates:
+      - path: templates/context.vxt
+`,
+		filepath.Join("vpkg", "vandor", "go-backend-core", "templates", "context.vxt"): `
+@template context
+@input name string
+@file "{{ project.go.module_root }}/{{ name }}.txt"
+module={{ project.go.module }}
+@endfile
+`,
+	})
+
+	previousWD, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	if err := os.Chdir(fixture.Path("services", "billing", "internal", "app")); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(previousWD)
+	})
+
+	output, err := testutil.RunCLI(t, newRootCmd(), "view", "vandor/go-backend-core:default", "--plan", "--set", "name=booking")
+	if err != nil {
+		t.Fatalf("view returned error: %v\noutput:\n%s", err, output)
+	}
+	if !strings.Contains(output, filepath.Join("services", "billing", "booking.txt")) {
+		t.Fatalf("expected planned output to include module-relative path, output:\n%s", output)
+	}
+}

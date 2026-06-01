@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -61,11 +62,22 @@ func runView(cmd *cobra.Command, opts *viewOptions, targetArg string) error {
 		return err
 	}
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("get working directory: %w", err)
+	}
+
+	projectContext, err := project.DetectContext(projectRoot, cwd)
+	if err != nil {
+		return err
+	}
+
 	result, err := viewsvc.Inspect(viewsvc.Request{
-		ProjectRoot: projectRoot,
-		Target:      target,
-		Input:       values,
-		Plan:        opts.plan,
+		ProjectRoot:    projectRoot,
+		ProjectContext: projectContext,
+		Target:         target,
+		Input:          values,
+		Plan:           opts.plan,
 	})
 	if err != nil {
 		return err

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -62,8 +63,19 @@ func runGen(cmd *cobra.Command, opts *genOptions, targetArg string) error {
 		return err
 	}
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("get working directory: %w", err)
+	}
+
+	projectContext, err := project.DetectContext(projectRoot, cwd)
+	if err != nil {
+		return err
+	}
+
 	result, err := gensvc.Generate(gensvc.Request{
 		ProjectRoot:    projectRoot,
+		ProjectContext: projectContext,
 		Target:         target,
 		Input:          values,
 		Apply:          opts.apply,
