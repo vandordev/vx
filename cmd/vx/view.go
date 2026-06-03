@@ -20,6 +20,7 @@ type viewOptions struct {
 	valuesPath     string
 	sets           []string
 	asJSON         bool
+	prompt         bool
 	nonInteractive bool
 }
 
@@ -37,6 +38,7 @@ func newViewCmd() *cobra.Command {
 	cmd.Flags().StringVar(&opts.valuesPath, "values", "", "path to a YAML or JSON values file")
 	cmd.Flags().StringArrayVar(&opts.sets, "set", nil, "set one input value with key=value syntax")
 	cmd.Flags().BoolVar(&opts.asJSON, "json", false, "print machine-readable JSON output")
+	cmd.Flags().BoolVarP(&opts.prompt, "prompt", "i", false, "prompt for missing template inputs when planning")
 	cmd.Flags().BoolVar(&opts.nonInteractive, "non-interactive", false, "fail instead of prompting for missing input")
 	return cmd
 }
@@ -60,6 +62,25 @@ func runView(cmd *cobra.Command, opts *viewOptions, targetArg string) error {
 	values, err := input.Load(opts.valuesPath, opts.sets)
 	if err != nil {
 		return err
+	}
+	if err := validatePromptOptions(promptOptions{
+		Prompt:         opts.prompt,
+		AsJSON:         opts.asJSON,
+		NonInteractive: opts.nonInteractive,
+		RequiresPlan:   opts.plan,
+	}); err != nil {
+		return err
+	}
+
+	if opts.plan {
+		fields, err := requiredFieldsForTarget(projectRoot, target)
+		if err != nil {
+			return err
+		}
+		values, err = resolvePromptedInput(values, fields, opts.prompt)
+		if err != nil {
+			return err
+		}
 	}
 
 	cwd, err := os.Getwd()

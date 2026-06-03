@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/vandordev/vx/internal/testutil"
+	"github.com/vandordev/vx/internal/ui"
 )
 
 func TestViewCommandIsRegistered(t *testing.T) {
@@ -250,4 +251,107 @@ module={{ project.go.module }}
 	if !strings.Contains(output, filepath.Join("services", "billing", "booking.txt")) {
 		t.Fatalf("expected planned output to include module-relative path, output:\n%s", output)
 	}
+}
+
+func TestViewCommandPromptMode(t *testing.T) {
+	fixture := testutil.NewProjectFixture(t, testutil.ProjectLayout{
+		VPKGRoots: []string{"."},
+	})
+	fixture.WriteFiles(t, map[string]string{
+		filepath.Join("vpkg", "vandor", "go-backend-core", "vpkg.yaml"): `
+apiVersion: vandor.dev/v1alpha1
+name: vandor/go-backend-core
+version: 0.1.0
+kind: template-pack
+exports:
+  default:
+    kind: template
+    templates:
+      - path: templates/usecase.vxt
+`,
+		filepath.Join("vpkg", "vandor", "go-backend-core", "templates", "usecase.vxt"): `
+@template usecase
+@input name string
+@file "internal/{{ name }}.txt"
+hello {{ name }}
+@endfile
+`,
+	})
+
+	previousWD, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	if err := os.Chdir(fixture.Root); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(previousWD)
+	})
+
+	t.Run("prompts for plan input", func(t *testing.T) {
+		restoreTTY := stubTTY(t, true, true)
+		defer restoreTTY()
+		restorePrompt := stubPrompt(t, func(fields []ui.PromptField) (map[string]string, error) {
+			if len(fields) != 1 || fields[0].Name != "name" {
+				t.Fatalf("fields = %#v", fields)
+			}
+			return map[string]string{"name": "booking"}, nil
+		})
+		defer restorePrompt()
+
+		output, err := testutil.RunCLI(t, newRootCmd(), "view", "vandor/go-backend-core:default", "--plan", "-i")
+		if err != nil {
+			t.Fatalf("view --plan -i returned error: %v\noutput:\n%s", err, output)
+		}
+		if !strings.Contains(output, "internal/booking.txt") {
+			t.Fatalf("output:\n%s", output)
+		}
+	})
+
+	t.Run("requires planning", func(t *testing.T) {
+		output, err := testutil.RunCLI(t, newRootCmd(), "view", "vandor/go-backend-core:default", "-i")
+		if err == nil || !strings.Contains(output, "--prompt requires template planning") {
+			t.Fatalf("err=%v output:\n%s", err, output)
+		}
+	})
+
+	t.Run("rejects prompt with json", func(t *testing.T) {
+		output, err := testutil.RunCLI(t, newRootCmd(), "view", "vandor/go-backend-core:default", "--plan", "-i", "--json")
+		if err == nil || !strings.Contains(output, "--prompt cannot be used with --json") {
+			t.Fatalf("err=%v output:\n%s", err, output)
+		}
+	})
+
+	t.Run("rejects prompt with non interactive", func(t *testing.T) {
+		output, err := testutil.RunCLI(t, newRootCmd(), "view", "vandor/go-backend-core:default", "--plan", "-i", "--non-interactive")
+		if err == nil || !strings.Contains(output, "--prompt cannot be used with --non-interactive") {
+			t.Fatalf("err=%v output:\n%s", err, output)
+		}
+	})
+
+	t.Run("still fails without prompt flag", func(t *testing.T) {
+		output, err := testutil.RunCLI(t, newRootCmd(), "view", "vandor/go-backend-core:default", "--plan")
+		if err == nil || !strings.Contains(output, "missing input") {
+			t.Fatalf("err=%v output:\n%s", err, output)
+		}
+	})
+
+	t.Run("does not prompt when set already supplies value", func(t *testing.T) {
+		restoreTTY := stubTTY(t, true, true)
+		defer restoreTTY()
+		restorePrompt := stubPrompt(t, func(fields []ui.PromptField) (map[string]string, error) {
+			t.Fatalf("prompt should not be called, fields=%#v", fields)
+			return nil, nil
+		})
+		defer restorePrompt()
+
+		output, err := testutil.RunCLI(t, newRootCmd(), "view", "vandor/go-backend-core:default", "--plan", "-i", "--set", "name=from-set")
+		if err != nil {
+			t.Fatalf("view --plan -i --set returned error: %v\noutput:\n%s", err, output)
+		}
+		if !strings.Contains(output, "internal/from-set.txt") {
+			t.Fatalf("output:\n%s", output)
+		}
+	})
 }
