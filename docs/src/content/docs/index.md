@@ -216,7 +216,7 @@ curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.s
 Pin a release or change the install directory with:
 
 ```bash
-VERSION=v0.3.1 curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
+VERSION=v0.4.0 curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
 BIN_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
 ```
 
