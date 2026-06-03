@@ -43,8 +43,11 @@ vx view vandor/go-backend-core
 vx view vandor/go-backend-core:default
 vx view ./templates/usecase.vxt
 vx gen vandor/go-backend-core --set name=create_booking
+vx gen vandor/go-backend-core -i
 vx gen ./templates/usecase.vxt --set context=booking --apply
+vx gen vandor/go-backend-core -i --apply
 vx generate vandor/go-backend-core:default --set name=create_booking
+vx view vandor/go-backend-core:default --plan -i
 vx config
 vx config init
 vx completion bash
@@ -63,6 +66,9 @@ vx completion bash
 - only `template` exports and direct `.vxt` files are executable
 - output writes target the detected project root, not the current working directory
 - files are written only with `--apply`
+- `-i, --prompt` prompts only for missing template `@input` values
+- prompted values do not override values already supplied by `--values` or `--set`
+- `--json` and `--non-interactive` cannot be combined with `--prompt`
 
 ## Project Layout
 

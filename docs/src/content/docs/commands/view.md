@@ -11,6 +11,12 @@ Inspect a local vpkg package, export, or direct .vxt file
 vx view <target>
 ```
 
+## Flags
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `-i, --prompt` | bool | prompt for missing template inputs when planning |
+
 ## Source
 
 See [view.go](https://github.com/vandordev/vx/blob/main/cmd/vx/view.go) for implementation details.

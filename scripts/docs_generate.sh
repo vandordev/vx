@@ -27,6 +27,11 @@ if [ -z "$REPOSITORY" ]; then
   REPOSITORY="https://github.com/vandordev/${PROJECT_NAME}"
 fi
 
+is_command_file() {
+  local file="$1"
+  grep -q "cobra.Command" "$file"
+}
+
 echo "🔧 Updating docs config..."
 
 # Update docs/config.mjs with values from package.toml
@@ -55,6 +60,9 @@ if [ -d "$CMD_DIR" ]; then
   for cmd_file in "$CMD_DIR"/*.go; do
     # Skip test files, main.go, and root.go
     if [[ "$cmd_file" == *"_test.go" ]] || [[ "$cmd_file" == *"/main.go" ]] || [[ "$cmd_file" == *"/root.go" ]]; then
+      continue
+    fi
+    if ! is_command_file "$cmd_file"; then
       continue
     fi
 
@@ -302,6 +310,9 @@ EOF
     if [[ "$cmd_file" == *"_test.go" ]] || [[ "$cmd_file" == *"/main.go" ]] || [[ "$cmd_file" == *"/root.go" ]]; then
       continue
     fi
+    if ! is_command_file "$cmd_file"; then
+      continue
+    fi
 
     cmd_name=$(basename "$cmd_file" .go | sed 's/_cmd$//')
     cmd_display=$(echo "$cmd_name" | sed 's/_/ /g')
@@ -331,6 +342,9 @@ fi
 for cmd_file in "$CMD_DIR"/*.go; do
   # Skip test files, main.go, and root.go
   if [[ "$cmd_file" == *"_test.go" ]] || [[ "$cmd_file" == *"/main.go" ]] || [[ "$cmd_file" == *"/root.go" ]]; then
+    continue
+  fi
+  if ! is_command_file "$cmd_file"; then
     continue
   fi
 

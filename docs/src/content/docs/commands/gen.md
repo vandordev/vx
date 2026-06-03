@@ -11,6 +11,12 @@ Preview or apply generation for a local vpkg export or .vxt file
 vx gen <target>
 ```
 
+## Flags
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `-i, --prompt` | bool | prompt for missing template inputs |
+
 ## Source
 
 See [gen.go](https://github.com/vandordev/vx/blob/main/cmd/vx/gen.go) for implementation details.
