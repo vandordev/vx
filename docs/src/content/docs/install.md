@@ -15,7 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.s
 Install a pinned release:
 
 ```bash
-VERSION=v0.4.0 curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
+VERSION=v0.4.1 curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
 ```
 
 Override the install directory:
