@@ -63,6 +63,9 @@ vx completion bash
 - output writes target the detected project root, not the current working directory
 - files are written only with `--apply`
 - `-i, --prompt` prompts only for missing template `@input` values
+- after prompted input, `vx gen -i` asks whether to `Preview` or `Apply`
+- the action selector defaults to `Preview`
+- `vx gen <target> -i --apply` skips the action selector and applies directly
 - prompted values do not override values already supplied by `--values` or `--set`
 - `--json` and `--non-interactive` cannot be combined with `--prompt`
 

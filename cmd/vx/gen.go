@@ -77,7 +77,16 @@ func runGen(cmd *cobra.Command, opts *genOptions, targetArg string) error {
 	if err != nil {
 		return err
 	}
-	values, err = resolvePromptedInput(values, fields, opts.prompt)
+	promptedResult, err := resolvePromptedInput(values, fields, opts.prompt)
+	if err != nil {
+		return err
+	}
+	values = promptedResult.Values
+
+	apply, err := resolvePromptedGenerationApply(promptedGenerationApplyOptions{
+		ExplicitApply: opts.apply,
+		Prompted:      promptedResult.Prompted,
+	})
 	if err != nil {
 		return err
 	}
@@ -97,7 +106,7 @@ func runGen(cmd *cobra.Command, opts *genOptions, targetArg string) error {
 		ProjectContext: projectContext,
 		Target:         target,
 		Input:          values,
-		Apply:          opts.apply,
+		Apply:          apply,
 		NonInteractive: opts.nonInteractive,
 	})
 	if err != nil {

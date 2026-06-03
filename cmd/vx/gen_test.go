@@ -313,6 +313,10 @@ hello {{ name }}
 	t.Run("fills missing input with prompt", func(t *testing.T) {
 		restoreTTY := stubTTY(t, true, true)
 		defer restoreTTY()
+		restoreAction := stubPromptGenerationAction(t, func() (ui.GenerationAction, error) {
+			return ui.GenerationActionPreview, nil
+		})
+		defer restoreAction()
 		restorePrompt := stubPrompt(t, func(fields []ui.PromptField) (map[string]string, error) {
 			if len(fields) != 1 || fields[0].Name != "name" {
 				t.Fatalf("fields = %#v", fields)
@@ -337,6 +341,11 @@ hello {{ name }}
 			return map[string]string{"name": "checkout"}, nil
 		})
 		defer restorePrompt()
+		restoreAction := stubPromptGenerationAction(t, func() (ui.GenerationAction, error) {
+			t.Fatalf("action selector should not be called when --apply is explicit")
+			return "", nil
+		})
+		defer restoreAction()
 
 		output, err := testutil.RunCLI(t, newRootCmd(), "gen", "vandor/go-backend-core", "-i", "--apply")
 		if err != nil {
@@ -354,6 +363,58 @@ hello {{ name }}
 		}
 	})
 
+	t.Run("apply can be chosen after prompted input", func(t *testing.T) {
+		restoreTTY := stubTTY(t, true, true)
+		defer restoreTTY()
+		restorePrompt := stubPrompt(t, func(fields []ui.PromptField) (map[string]string, error) {
+			return map[string]string{"name": "chosen_apply"}, nil
+		})
+		defer restorePrompt()
+		restoreAction := stubPromptGenerationAction(t, func() (ui.GenerationAction, error) {
+			return ui.GenerationActionApply, nil
+		})
+		defer restoreAction()
+
+		output, err := testutil.RunCLI(t, newRootCmd(), "gen", "vandor/go-backend-core", "-i")
+		if err != nil {
+			t.Fatalf("gen -i returned error: %v\noutput:\n%s", err, output)
+		}
+		if !strings.Contains(output, "Applied: true") {
+			t.Fatalf("output:\n%s", output)
+		}
+		content, err := os.ReadFile(fixture.Path("internal", "chosen_apply.txt"))
+		if err != nil {
+			t.Fatalf("read generated file: %v", err)
+		}
+		if !strings.Contains(string(content), "hello chosen_apply") {
+			t.Fatalf("generated file content = %q", string(content))
+		}
+	})
+
+	t.Run("preview can be chosen after prompted input", func(t *testing.T) {
+		restoreTTY := stubTTY(t, true, true)
+		defer restoreTTY()
+		restorePrompt := stubPrompt(t, func(fields []ui.PromptField) (map[string]string, error) {
+			return map[string]string{"name": "chosen_preview"}, nil
+		})
+		defer restorePrompt()
+		restoreAction := stubPromptGenerationAction(t, func() (ui.GenerationAction, error) {
+			return ui.GenerationActionPreview, nil
+		})
+		defer restoreAction()
+
+		output, err := testutil.RunCLI(t, newRootCmd(), "gen", "vandor/go-backend-core", "-i")
+		if err != nil {
+			t.Fatalf("gen -i returned error: %v\noutput:\n%s", err, output)
+		}
+		if strings.Contains(output, "Applied: true") {
+			t.Fatalf("output:\n%s", output)
+		}
+		if _, err := os.Stat(fixture.Path("internal", "chosen_preview.txt")); !os.IsNotExist(err) {
+			t.Fatalf("expected preview not to write file, stat err=%v", err)
+		}
+	})
+
 	t.Run("generate alias matches prompt output", func(t *testing.T) {
 		restoreTTY := stubTTY(t, true, true)
 		defer restoreTTY()
@@ -361,6 +422,10 @@ hello {{ name }}
 			return map[string]string{"name": "alias"}, nil
 		})
 		defer restorePrompt()
+		restoreAction := stubPromptGenerationAction(t, func() (ui.GenerationAction, error) {
+			return ui.GenerationActionPreview, nil
+		})
+		defer restoreAction()
 
 		genOutput, err := testutil.RunCLI(t, newRootCmd(), "gen", "vandor/go-backend-core", "-i", "--json")
 		if err == nil {
@@ -405,6 +470,11 @@ hello {{ name }}
 			return nil, nil
 		})
 		defer restorePrompt()
+		restoreAction := stubPromptGenerationAction(t, func() (ui.GenerationAction, error) {
+			t.Fatalf("action selector should not be called when no prompt ran")
+			return "", nil
+		})
+		defer restoreAction()
 
 		output, err := testutil.RunCLI(t, newRootCmd(), "gen", "vandor/go-backend-core", "-i", "--set", "name=from-set")
 		if err != nil {
@@ -423,6 +493,11 @@ hello {{ name }}
 			return nil, nil
 		})
 		defer restorePrompt()
+		restoreAction := stubPromptGenerationAction(t, func() (ui.GenerationAction, error) {
+			t.Fatalf("action selector should not be called when no prompt ran")
+			return "", nil
+		})
+		defer restoreAction()
 
 		output, err := testutil.RunCLI(t, newRootCmd(), "gen", "vandor/go-backend-core", "-i", "--values", "values.yaml")
 		if err != nil {

@@ -61,15 +61,19 @@ func TestResolvePromptedInput(t *testing.T) {
 		})
 		defer restorePrompt()
 
-		values, err := resolvePromptedInput(map[string]any{"count": 2}, []input.RequiredField{
+		result, err := resolvePromptedInput(map[string]any{"count": 2}, []input.RequiredField{
 			{Name: "name", TypeName: "string"},
 			{Name: "count", TypeName: "int"},
 		}, true)
 		if err != nil {
 			t.Fatalf("resolvePromptedInput returned error: %v", err)
 		}
+		values := result.Values
 		if values["name"] != "booking" || values["count"] != 2 {
 			t.Fatalf("values = %#v", values)
+		}
+		if !result.Prompted {
+			t.Fatalf("Prompted = false, want true")
 		}
 		if len(requested) != 1 || requested[0].Name != "name" {
 			t.Fatalf("requested = %#v", requested)
@@ -87,14 +91,18 @@ func TestResolvePromptedInput(t *testing.T) {
 		})
 		defer restorePrompt()
 
-		values, err := resolvePromptedInput(map[string]any{"name": "booking"}, []input.RequiredField{
+		result, err := resolvePromptedInput(map[string]any{"name": "booking"}, []input.RequiredField{
 			{Name: "name", TypeName: "string"},
 		}, true)
 		if err != nil {
 			t.Fatalf("resolvePromptedInput returned error: %v", err)
 		}
+		values := result.Values
 		if values["name"] != "booking" {
 			t.Fatalf("values = %#v", values)
+		}
+		if result.Prompted {
+			t.Fatalf("Prompted = true, want false")
 		}
 		if called != 0 {
 			t.Fatalf("prompt called %d times", called)
@@ -141,15 +149,19 @@ func TestResolvePromptedInput(t *testing.T) {
 		})
 		defer restorePrompt()
 
-		values, err := resolvePromptedInput(map[string]any{}, []input.RequiredField{
+		result, err := resolvePromptedInput(map[string]any{}, []input.RequiredField{
 			{Name: "project", TypeName: "object"},
 			{Name: "project.go.module", TypeName: "string"},
 		}, true)
 		if err != nil {
 			t.Fatalf("resolvePromptedInput returned error: %v", err)
 		}
+		values := result.Values
 		if len(values) != 0 {
 			t.Fatalf("values = %#v", values)
+		}
+		if result.Prompted {
+			t.Fatalf("Prompted = true, want false")
 		}
 		if called != 0 {
 			t.Fatalf("prompt called %d times", called)
@@ -205,5 +217,101 @@ func TestResolvePromptedInputPropagatesPromptError(t *testing.T) {
 	}, true)
 	if err == nil || !strings.Contains(err.Error(), "prompt cancelled") {
 		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestResolvePromptedGenerationApply(t *testing.T) {
+	t.Run("uses explicit apply without selector", func(t *testing.T) {
+		called := 0
+		restore := stubPromptGenerationAction(t, func() (ui.GenerationAction, error) {
+			called++
+			return ui.GenerationActionPreview, nil
+		})
+		defer restore()
+
+		apply, err := resolvePromptedGenerationApply(promptedGenerationApplyOptions{
+			ExplicitApply: true,
+			Prompted:      true,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !apply {
+			t.Fatalf("apply = false, want true")
+		}
+		if called != 0 {
+			t.Fatalf("selector called %d times", called)
+		}
+	})
+
+	t.Run("skips selector when nothing was prompted", func(t *testing.T) {
+		called := 0
+		restore := stubPromptGenerationAction(t, func() (ui.GenerationAction, error) {
+			called++
+			return ui.GenerationActionApply, nil
+		})
+		defer restore()
+
+		apply, err := resolvePromptedGenerationApply(promptedGenerationApplyOptions{})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if apply {
+			t.Fatalf("apply = true, want false")
+		}
+		if called != 0 {
+			t.Fatalf("selector called %d times", called)
+		}
+	})
+
+	t.Run("uses preview selection", func(t *testing.T) {
+		restore := stubPromptGenerationAction(t, func() (ui.GenerationAction, error) {
+			return ui.GenerationActionPreview, nil
+		})
+		defer restore()
+
+		apply, err := resolvePromptedGenerationApply(promptedGenerationApplyOptions{Prompted: true})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if apply {
+			t.Fatalf("apply = true, want false")
+		}
+	})
+
+	t.Run("uses apply selection", func(t *testing.T) {
+		restore := stubPromptGenerationAction(t, func() (ui.GenerationAction, error) {
+			return ui.GenerationActionApply, nil
+		})
+		defer restore()
+
+		apply, err := resolvePromptedGenerationApply(promptedGenerationApplyOptions{Prompted: true})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !apply {
+			t.Fatalf("apply = false, want true")
+		}
+	})
+
+	t.Run("propagates selector error", func(t *testing.T) {
+		restore := stubPromptGenerationAction(t, func() (ui.GenerationAction, error) {
+			return "", fmt.Errorf("selection cancelled")
+		})
+		defer restore()
+
+		_, err := resolvePromptedGenerationApply(promptedGenerationApplyOptions{Prompted: true})
+		if err == nil || !strings.Contains(err.Error(), "selection cancelled") {
+			t.Fatalf("error = %v", err)
+		}
+	})
+}
+
+func stubPromptGenerationAction(t *testing.T, fn func() (ui.GenerationAction, error)) func() {
+	t.Helper()
+	original := promptGenerationAction
+	promptGenerationAction = fn
+	return func() {
+		promptGenerationAction = original
 	}
 }

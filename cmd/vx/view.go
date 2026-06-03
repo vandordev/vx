@@ -77,10 +77,11 @@ func runView(cmd *cobra.Command, opts *viewOptions, targetArg string) error {
 		if err != nil {
 			return err
 		}
-		values, err = resolvePromptedInput(values, fields, opts.prompt)
+		promptedResult, err := resolvePromptedInput(values, fields, opts.prompt)
 		if err != nil {
 			return err
 		}
+		values = promptedResult.Values
 	}
 
 	cwd, err := os.Getwd()

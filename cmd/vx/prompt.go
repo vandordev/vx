@@ -19,10 +19,21 @@ type promptOptions struct {
 	RequiresPlan   bool
 }
 
+type promptedInputResult struct {
+	Values   map[string]any
+	Prompted bool
+}
+
+type promptedGenerationApplyOptions struct {
+	ExplicitApply bool
+	Prompted      bool
+}
+
 var (
-	stdinIsTerminal  = func() bool { return tty.IsTerminal(os.Stdin.Fd()) }
-	stdoutIsTerminal = func() bool { return tty.IsTerminal(os.Stdout.Fd()) }
-	promptInputs     = realPromptInputs
+	stdinIsTerminal        = func() bool { return tty.IsTerminal(os.Stdin.Fd()) }
+	stdoutIsTerminal       = func() bool { return tty.IsTerminal(os.Stdout.Fd()) }
+	promptInputs           = realPromptInputs
+	promptGenerationAction = realPromptGenerationAction
 )
 
 func validatePromptOptions(opts promptOptions) error {
@@ -41,39 +52,42 @@ func validatePromptOptions(opts promptOptions) error {
 	return nil
 }
 
-func resolvePromptedInput(values map[string]any, fields []input.RequiredField, prompt bool) (map[string]any, error) {
+func resolvePromptedInput(values map[string]any, fields []input.RequiredField, prompt bool) (promptedInputResult, error) {
 	if !prompt {
-		return values, nil
+		return promptedInputResult{Values: values}, nil
 	}
 
 	missing := input.MissingRequiredInputs(fields, values)
 	if len(missing) == 0 {
-		return values, nil
+		return promptedInputResult{Values: values}, nil
 	}
 	if !stdinIsTerminal() || !stdoutIsTerminal() {
-		return nil, fmt.Errorf("cannot prompt for input in a non-interactive terminal")
+		return promptedInputResult{}, fmt.Errorf("cannot prompt for input in a non-interactive terminal")
 	}
 
 	rawValues, err := promptInputs(toPromptFields(missing))
 	if err != nil {
-		return nil, err
+		return promptedInputResult{}, err
 	}
 
 	prompted := make(map[string]any, len(missing))
 	for _, field := range missing {
 		rawValue, ok := rawValues[field.Name]
 		if !ok {
-			return nil, fmt.Errorf("missing prompted value for %q", field.Name)
+			return promptedInputResult{}, fmt.Errorf("missing prompted value for %q", field.Name)
 		}
 
 		value, err := input.ParsePromptValue(field.Name, field.TypeName, rawValue)
 		if err != nil {
-			return nil, err
+			return promptedInputResult{}, err
 		}
 		prompted[field.Name] = value
 	}
 
-	return input.MergePromptedValues(values, prompted), nil
+	return promptedInputResult{
+		Values:   input.MergePromptedValues(values, prompted),
+		Prompted: true,
+	}, nil
 }
 
 func toPromptFields(fields []input.RequiredField) []ui.PromptField {
@@ -89,6 +103,25 @@ func toPromptFields(fields []input.RequiredField) []ui.PromptField {
 
 func realPromptInputs(fields []ui.PromptField) (map[string]string, error) {
 	return ui.PromptInputs(fields, ui.ThemeFromConfig(domain.Config{}))
+}
+
+func realPromptGenerationAction() (ui.GenerationAction, error) {
+	return ui.PromptGenerationAction(ui.ThemeFromConfig(domain.Config{}))
+}
+
+func resolvePromptedGenerationApply(opts promptedGenerationApplyOptions) (bool, error) {
+	if opts.ExplicitApply {
+		return true, nil
+	}
+	if !opts.Prompted {
+		return false, nil
+	}
+
+	action, err := promptGenerationAction()
+	if err != nil {
+		return false, err
+	}
+	return action == ui.GenerationActionApply, nil
 }
 
 func requiredFieldsForTarget(projectRoot string, target resolve.ResolvedTarget) ([]input.RequiredField, error) {
