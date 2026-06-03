@@ -20,6 +20,7 @@ type genOptions struct {
 	valuesPath     string
 	sets           []string
 	asJSON         bool
+	prompt         bool
 	nonInteractive bool
 }
 
@@ -38,6 +39,7 @@ func newGenCmd() *cobra.Command {
 	cmd.Flags().StringVar(&opts.valuesPath, "values", "", "path to a YAML or JSON values file")
 	cmd.Flags().StringArrayVar(&opts.sets, "set", nil, "set one input value with key=value syntax")
 	cmd.Flags().BoolVar(&opts.asJSON, "json", false, "print machine-readable JSON output")
+	cmd.Flags().BoolVarP(&opts.prompt, "prompt", "i", false, "prompt for missing template inputs")
 	cmd.Flags().BoolVar(&opts.nonInteractive, "non-interactive", false, "fail instead of prompting for missing input")
 	return cmd
 }
@@ -59,6 +61,23 @@ func runGen(cmd *cobra.Command, opts *genOptions, targetArg string) error {
 	}
 
 	values, err := input.Load(opts.valuesPath, opts.sets)
+	if err != nil {
+		return err
+	}
+	if err := validatePromptOptions(promptOptions{
+		Prompt:         opts.prompt,
+		AsJSON:         opts.asJSON,
+		NonInteractive: opts.nonInteractive,
+		RequiresPlan:   true,
+	}); err != nil {
+		return err
+	}
+
+	fields, err := requiredFieldsForTarget(projectRoot, target)
+	if err != nil {
+		return err
+	}
+	values, err = resolvePromptedInput(values, fields, opts.prompt)
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,9 @@ import (
 	"github.com/vandordev/vx/internal/adapters/tty"
 	"github.com/vandordev/vx/internal/domain"
 	"github.com/vandordev/vx/internal/input"
+	"github.com/vandordev/vx/internal/resolve"
 	"github.com/vandordev/vx/internal/ui"
+	viewsvc "github.com/vandordev/vx/internal/view"
 )
 
 type promptOptions struct {
@@ -87,4 +89,23 @@ func toPromptFields(fields []input.RequiredField) []ui.PromptField {
 
 func realPromptInputs(fields []ui.PromptField) (map[string]string, error) {
 	return ui.PromptInputs(fields, ui.ThemeFromConfig(domain.Config{}))
+}
+
+func requiredFieldsForTarget(projectRoot string, target resolve.ResolvedTarget) ([]input.RequiredField, error) {
+	result, err := viewsvc.Inspect(viewsvc.Request{
+		ProjectRoot: projectRoot,
+		Target:      target,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	fields := make([]input.RequiredField, 0, len(result.RequiredInputs))
+	for _, field := range result.RequiredInputs {
+		fields = append(fields, input.RequiredField{
+			Name:     field.Name,
+			TypeName: field.TypeName,
+		})
+	}
+	return fields, nil
 }
