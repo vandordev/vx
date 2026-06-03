@@ -241,6 +241,69 @@ exports:
 			}
 		}
 	})
+
+	t.Run("applies vxt case filters to paths and written content", func(t *testing.T) {
+		fixture.WriteFiles(t, map[string]string{
+			filepath.Join("vpkg", "vandor", "go-backend-core", "templates", "filters.vxt"): `
+@template filters
+@input name string
+@file "internal/{{ name | snake }}/{{ name | kebab }}.go"
+package {{ name | snake }}
+
+type {{ name | pascal }}Service struct {
+	value string // {{ name | camel }}
+}
+@endfile
+`,
+			filepath.Join("vpkg", "vandor", "go-backend-core", "vpkg.yaml"): `
+apiVersion: vandor.dev/v1alpha1
+name: vandor/go-backend-core
+version: 0.1.0
+kind: template-pack
+exports:
+  filters:
+    kind: template
+    templates:
+      - path: templates/filters.vxt
+`,
+		})
+		packages, err := vpkg.Discover(fixture.Root)
+		if err != nil {
+			t.Fatalf("Discover returned error: %v", err)
+		}
+		target := mustResolveGenerate(t, fixture.Root, "vandor/go-backend-core:filters", packages)
+
+		result, err := Generate(Request{
+			ProjectRoot: fixture.Root,
+			Target:      target,
+			Input:       map[string]any{"name": "order item"},
+			Apply:       true,
+		})
+		if err != nil {
+			t.Fatalf("Generate returned error: %v", err)
+		}
+		if len(result.PlannedFiles) != 1 {
+			t.Fatalf("PlannedFiles = %#v", result.PlannedFiles)
+		}
+		planned := result.PlannedFiles[0]
+		if planned.Path != filepath.Join("internal", "order_item", "order-item.go") {
+			t.Fatalf("PlannedFile.Path = %q", planned.Path)
+		}
+
+		content, err := os.ReadFile(fixture.Path("internal", "order_item", "order-item.go"))
+		if err != nil {
+			t.Fatalf("read generated file: %v", err)
+		}
+		for _, snippet := range []string{
+			"package order_item",
+			"type OrderItemService struct",
+			"value string // orderItem",
+		} {
+			if !strings.Contains(string(content), snippet) {
+				t.Fatalf("expected generated content to contain %q, content:\n%s", snippet, content)
+			}
+		}
+	})
 }
 
 func mustResolveGenerate(t *testing.T, projectRoot string, target string, packages []vpkg.Package) resolve.ResolvedTarget {

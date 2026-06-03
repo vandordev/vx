@@ -227,6 +227,49 @@ exports:
 			t.Fatalf("PlannedFiles = %#v", result.PlannedFiles)
 		}
 	})
+
+	t.Run("applies vxt case filters to planned file paths", func(t *testing.T) {
+		fixture.WriteFiles(t, map[string]string{
+			filepath.Join("vpkg", "vandor", "go-backend-core", "templates", "filters.vxt"): `
+@template filters
+@input name string
+@file "internal/{{ name | snake }}/{{ name | kebab }}.go"
+package {{ name | snake }}
+
+type {{ name | pascal }}Service struct{}
+@endfile
+`,
+			filepath.Join("vpkg", "vandor", "go-backend-core", "vpkg.yaml"): `
+apiVersion: vandor.dev/v1alpha1
+name: vandor/go-backend-core
+version: 0.1.0
+kind: template-pack
+exports:
+  filters:
+    kind: template
+    templates:
+      - path: templates/filters.vxt
+`,
+		})
+		packages, err := vpkg.Discover(fixture.Root)
+		if err != nil {
+			t.Fatalf("Discover returned error: %v", err)
+		}
+		target := mustResolve(t, fixture.Root, "vandor/go-backend-core:filters", packages, resolve.ModeView)
+
+		result, err := Inspect(Request{
+			ProjectRoot: fixture.Root,
+			Target:      target,
+			Input:       map[string]any{"name": "order item"},
+			Plan:        true,
+		})
+		if err != nil {
+			t.Fatalf("Inspect returned error: %v", err)
+		}
+		if len(result.PlannedFiles) != 1 || result.PlannedFiles[0].Path != filepath.Join("internal", "order_item", "order-item.go") {
+			t.Fatalf("PlannedFiles = %#v", result.PlannedFiles)
+		}
+	})
 }
 
 func mustResolve(t *testing.T, projectRoot string, target string, packages []vpkg.Package, mode resolve.Mode) resolve.ResolvedTarget {

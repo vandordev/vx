@@ -4,7 +4,7 @@ description: A modern terminal-first CLI from Vandor Dev, built with Go, Cobra, 
 ---
 
 
-`vx` is the local runtime CLI for `vpkg` packages and `vxt` templates.
+A modern terminal-first CLI from Vandor Dev, built with Go, Cobra, and Bubble Tea.
 
 The current public surface is project-local and preview-first. `vx` discovers packages from the nearest parent directory containing `vpkg/`, inspects packages and exports with `vx view`, and previews or applies `template` exports and direct `.vxt` files with `vx gen`.
 
@@ -60,7 +60,7 @@ vx completion bash
 
 `vx gen` is preview-first:
 
-- only `template` exports and direct `.vxt` files are executable in `v0.1`
+- only `template` exports and direct `.vxt` files are executable
 - output writes target the detected project root, not the current working directory
 - files are written only with `--apply`
 
@@ -87,6 +87,31 @@ Supported target forms:
 - unique shorthand package such as `go-backend-core`
 - unique shorthand export such as `usecase`
 - direct path such as `./templates/usecase.vxt`
+
+## Project Context
+
+`vx` injects project context into `vxt` template input for `vx view --plan` and `vx gen`.
+
+- `project.root` is always available for successful commands.
+- `project.language` is currently only `go` and is present only when Go is detected.
+- Go fields live under `project.go.*`.
+- `project.go.module_root` is relative to `project.root`.
+- The nearest in-root `go.mod` from the current working directory wins.
+- Undetected context is omitted instead of injected as blank strings.
+
+Example:
+
+```vxt
+@template service
+@input name string
+@file "{{ project.go.module_root }}/internal/{{ name | snake }}/service.go"
+package {{ name | snake }}
+
+type {{ name | pascal }}Service struct{}
+
+// module: {{ project.go.module }}
+@endfile
+```
 
 ## Configuration
 
@@ -185,7 +210,7 @@ curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.s
 Pin a release or change the install directory with:
 
 ```bash
-VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
+VERSION=v0.3.0 curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
 BIN_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
 ```
 

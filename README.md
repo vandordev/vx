@@ -56,7 +56,7 @@ vx completion bash
 
 `vx gen` is preview-first:
 
-- only `template` exports and direct `.vxt` files are executable in `v0.1`
+- only `template` exports and direct `.vxt` files are executable
 - output writes target the detected project root, not the current working directory
 - files are written only with `--apply`
 
@@ -100,8 +100,10 @@ Example:
 ```vxt
 @template service
 @input name string
-@file "{{ project.go.module_root }}/internal/{{ name }}.go"
-package {{ name }}
+@file "{{ project.go.module_root }}/internal/{{ name | snake }}/service.go"
+package {{ name | snake }}
+
+type {{ name | pascal }}Service struct{}
 
 // module: {{ project.go.module }}
 @endfile
@@ -204,7 +206,7 @@ curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.s
 Pin a release or change the install directory with:
 
 ```bash
-VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
+VERSION=v0.3.0 curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
 BIN_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/vandordev/vx/main/scripts/install.sh | sh
 ```
 
